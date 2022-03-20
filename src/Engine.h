@@ -1,15 +1,19 @@
 #pragma once
 
+#include "Swapchain.h"
+
 class DeviceContext;
 class Window;
 
 class Engine {
-   public:
+public:
     Engine(DeviceContext &rContext, Window &rWindow);
+    ~Engine();
 
     void Render();
 
-   private:
-    DeviceContext *pContext_;
-    Window *pWindow_;
+private:
+    DeviceContext &rContext_;
+    Window &rWindow_;
+    Swapchain swapchain_;
 };

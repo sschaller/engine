@@ -2,16 +2,35 @@
 #include <vulkan/vulkan.h>
 
 #include <functional>
+#include <optional>
 
+class Window;
 
 class DeviceContext final {
-   public:
+public:
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
+
+        bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
+    };
+
+public:
     DeviceContext(const std::vector<const char *> &requiredExtensions);
     ~DeviceContext();
+    void CreateDevice(VkSurfaceKHR &rSurface);
+    VkInstance &GetInstance() { return instance_; }
+    VkPhysicalDevice &GetPhysicalDevice() { return physicalDevice_; }
+    VkDevice &GetDevice() { return device_; }
 
-   private:
-    VkInstance instance_;
-    VkDebugUtilsMessengerEXT debugMessenger_;
-    VkPhysicalDevice physicalDevice_;
-    VkDevice device_;
+public:
+	static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+
+private:
+    VkInstance instance_ = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+    VkDevice device_ = VK_NULL_HANDLE;
+	VkQueue graphicsQueue_ = VK_NULL_HANDLE;
+	VkQueue presentQueue_ = VK_NULL_HANDLE;
 };
