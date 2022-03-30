@@ -31,6 +31,18 @@ public:
 
     void DestroyResources();
 
+	void WaitForNextFrame();
+
+	AvailableImageInfo AcquireImage();
+
+	bool Present(const AvailableImageInfo &availableInfo);
+
+    VkFormat &GetImageFormat() { return swapchainImageFormat_; }
+	VkExtent2D &GetExtent2D() { return swapchainExtent_; }
+	VkSurfaceKHR &GetSurface() { return surface_; }
+	std::vector<VkImageView> &GetImageViews() { return swapchainImageViews_; }
+    uint32_t GetNumberOfImages() const { return static_cast<uint32_t>(swapchainImages_.size()); }
+
 public:
     static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 

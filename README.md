@@ -10,6 +10,7 @@
 ## Goals
 - Deferred shading
 - Some sort of order-independent transparency
+- Shadows
 - Well structured components (vulkan, engine, windowing, gui / inputs)
 
 ## Build & Run

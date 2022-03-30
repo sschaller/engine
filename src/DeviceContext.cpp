@@ -257,12 +257,36 @@ void DeviceContext::CreateDevice(VkSurfaceKHR &rSurface) {
     }
 
     physicalDevice_ = pickPhysicalDevice(instance_, rSurface);
-    QueueFamilyIndices indices = FindQueueFamilies(physicalDevice_, rSurface);
+    queueFamilyIndices_ = FindQueueFamilies(physicalDevice_, rSurface);
 
-    device_ = createLogicalDevice(physicalDevice_, indices);
+    device_ = createLogicalDevice(physicalDevice_, queueFamilyIndices_);
 
-    vkGetDeviceQueue(device_, indices.graphicsFamily.value(), 0, &graphicsQueue_);
-    vkGetDeviceQueue(device_, indices.presentFamily.value(), 0, &presentQueue_);
+    vkGetDeviceQueue(device_, queueFamilyIndices_.graphicsFamily.value(), 0, &graphicsQueue_);
+    vkGetDeviceQueue(device_, queueFamilyIndices_.presentFamily.value(), 0, &presentQueue_);
+}
+
+void DeviceContext::Submit(VkSubmitInfo &&submitInfo, const VkFence &buffersReadyFence)
+{
+	if(buffersReadyFence != VK_NULL_HANDLE)
+	{
+		vkResetFences(device_, 1, &buffersReadyFence);
+	}
+	VkResult result = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, buffersReadyFence);
+	if(result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+}
+
+
+VkResult DeviceContext::Present(const VkPresentInfoKHR &presentInfo)
+{
+	return vkQueuePresentKHR(presentQueue_, &presentInfo);
+}
+
+void DeviceContext::WaitIdle()
+{
+	vkDeviceWaitIdle(device_);
 }
 
 DeviceContext::QueueFamilyIndices DeviceContext::FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)

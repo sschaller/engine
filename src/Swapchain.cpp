@@ -9,7 +9,10 @@ namespace {
 }
 
 Swapchain::Swapchain(DeviceContext &rDeviceContext, Window &rWindow)
-    : rDeviceContext_(rDeviceContext), rWindow_(rWindow), outOfDate_(true) {}
+    : rDeviceContext_(rDeviceContext), rWindow_(rWindow), outOfDate_(true) {
+        surface_ = rWindow_.CreateSurface(rDeviceContext_);
+        rDeviceContext_.CreateDevice(surface_);
+    }
 
 Swapchain::~Swapchain() {
     if(swapchain_ != VK_NULL_HANDLE) {
@@ -18,9 +21,8 @@ Swapchain::~Swapchain() {
 		// Destroy Swapchain
 		vkDestroySwapchainKHR(rDeviceContext_.GetDevice(), swapchain_, nullptr);
 		swapchain_ = VK_NULL_HANDLE;
-
-        vkDestroySurfaceKHR(rDeviceContext_.GetInstance(), surface_, nullptr);
     }
+    vkDestroySurfaceKHR(rDeviceContext_.GetInstance(), surface_, nullptr);
 }
 
 bool Swapchain::Update() {
@@ -30,11 +32,7 @@ bool Swapchain::Update() {
         return false;
     }
 
-    if (swapchain_ == VK_NULL_HANDLE) {
-        // We don't have a swapchain, make sure device context is set up
-        surface_ = rWindow_.CreateSurface(rDeviceContext_);
-        rDeviceContext_.CreateDevice(surface_);
-    } else {
+    if (swapchain_ != VK_NULL_HANDLE) {
         // We already created a swapchain, first destroy resources of the existing one
         // Keeps swapchain around for reuse
         DestroyResources();
@@ -136,6 +134,74 @@ void Swapchain::DestroyResources() {
     swapchainImageViews_.clear();
 }
 
+void Swapchain::WaitForNextFrame()
+{
+	vkWaitForFences(rDeviceContext_.GetDevice(), 1, &inFlightFences_[m_currentFrame], VK_TRUE, UINT64_MAX);
+}
+
+Swapchain::AvailableImageInfo Swapchain::AcquireImage()
+{
+	uint32_t imageIndex;
+	VkResult result = vkAcquireNextImageKHR(rDeviceContext_.GetDevice(), swapchain_, UINT64_MAX, imageAvailableSemaphores_[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+	if(result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		// Return available image info in error state
+		return AvailableImageInfo{};
+	}
+	if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		throw std::runtime_error("Failed to acquire swap chain image!");
+	}
+
+	// Check if a previous frame is using this image (i.e. there is its fence to wait on)
+	if(imagesInFlight_[imageIndex] != VK_NULL_HANDLE)
+	{
+		vkWaitForFences(rDeviceContext_.GetDevice(), 1, &imagesInFlight_[imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	// Mark the image as now being in use by this frame
+	imagesInFlight_[imageIndex] = inFlightFences_[m_currentFrame];
+
+	AvailableImageInfo availableInfo;
+	availableInfo.imageIndex = imageIndex;
+	availableInfo.imageAvailableSemaphore = imageAvailableSemaphores_[m_currentFrame];
+	availableInfo.renderFinishedSemaphore = renderFinishedSemaphores_[m_currentFrame];
+	availableInfo.inFlightFence = inFlightFences_[m_currentFrame];
+
+	return availableInfo;
+}
+
+bool Swapchain::Present(const AvailableImageInfo &availableInfo)
+{
+	VkSemaphore waitSemaphores[] = {availableInfo.renderFinishedSemaphore};
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = waitSemaphores;
+
+	VkSwapchainKHR swapChains[] = {swapchain_};
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &availableInfo.imageIndex;
+	presentInfo.pResults = nullptr; // Optional
+
+	VkResult result = rDeviceContext_.Present(std::move(presentInfo));
+	if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
+		return false;
+	}
+	if(result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+
+	m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+	return true;
+}
+
+
+
 Swapchain::SwapChainSupportDetails Swapchain::QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
     Swapchain::SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -220,7 +286,7 @@ void Swapchain::createSyncObjects() {
 }
 
 void Swapchain::cleanupSyncObjects() {
-    // Only contains references to fences in m_inFlightFences.
+    // Only contains references to fences in inFlightFences_.
     imagesInFlight_.clear();
 
     for (VkFence &fence : inFlightFences_) {
