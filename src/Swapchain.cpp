@@ -9,7 +9,7 @@ namespace {
 }
 
 Swapchain::Swapchain(DeviceContext &rDeviceContext, Window &rWindow)
-    : rDeviceContext_(rDeviceContext), rWindow_(rWindow), outOfDate_(true) {
+    : rDeviceContext_(rDeviceContext), rWindow_(rWindow) {
         surface_ = rWindow_.CreateSurface(rDeviceContext_);
         rDeviceContext_.CreateDevice(surface_);
     }
@@ -31,6 +31,7 @@ bool Swapchain::Update() {
     if (!outOfDate_) {
         return false;
     }
+    outOfDate_ = false;
 
     if (swapchain_ != VK_NULL_HANDLE) {
         // We already created a swapchain, first destroy resources of the existing one

@@ -2,7 +2,7 @@ from conans import ConanFile, CMake
 
 class EngineConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "sdl/2.0.20"  # comma-separated list of requirements
+    requires = "sdl/2.0.20", "glm/0.9.9.8"  # comma-separated list of requirements
     generators = "cmake", "visual_studio", "txt"
     default_options = {}
 
@@ -13,4 +13,3 @@ class EngineConan(ConanFile):
       self.copy("*.dll", dst="bin", src="bin")  # From bin to bin
       self.copy("*.pdb", dst="bin", src="bin")  # From bin to bin
       self.copy("*.dylib*", dst="bin", src="lib")  # From lib to bin
-        

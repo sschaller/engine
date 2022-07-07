@@ -1,8 +1,66 @@
 #include "GraphicsPipeline.h"
 
+#include <fstream>
 #include <stdexcept>
+#include "DeviceContext.h"
+#include "Swapchain.h"
 
-GraphicsPipeline::GraphicsPipeline()
+#include <array>
+#include <glm/glm.hpp>
+
+namespace
+{
+	std::vector<char> readFile(const std::string &filename)
+	{
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if(!file.is_open())
+		{
+			throw std::runtime_error("failed to open file: " + filename + "!");
+		}
+
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+		file.close();
+
+		return buffer;
+	}
+}
+
+struct Vertex
+{
+	glm::vec2 pos;
+	glm::vec3 color;
+
+	static VkVertexInputBindingDescription getBindingDescription()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Vertex);
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+	{
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, pos);
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, color);
+		return attributeDescriptions;
+	}
+};
+
+GraphicsPipeline::GraphicsPipeline(DeviceContext &rDeviceContext, Swapchain &rSwapchain, VkRenderPass renderPass, VkFormat imageFormat)
+	: deviceContext_(rDeviceContext)
 {
 	// Create descriptor set layout
 	VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -18,7 +76,7 @@ GraphicsPipeline::GraphicsPipeline()
 	layoutInfo.pBindings = &uboLayoutBinding;
 
 	// Needs to be destroyed
-	if(vkCreateDescriptorSetLayout(m_rDeviceContext.GetDevice(), &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS)
+	if(vkCreateDescriptorSetLayout(rDeviceContext.GetDevice(), &layoutInfo, nullptr, &descriptorSetLayout_) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create descriptor set layout!");
 	}
@@ -26,35 +84,35 @@ GraphicsPipeline::GraphicsPipeline()
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount = 1;                   // Optional
-	pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout; // Optional
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout_; // Optional
 	pipelineLayoutInfo.pushConstantRangeCount = 0;           // Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;        // Optional
 
-	if(vkCreatePipelineLayout(m_rDeviceContext.GetDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
+	if(vkCreatePipelineLayout(rDeviceContext.GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout_) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
 	// Create pipeline layout
-	if(m_vertShaderModule == VK_NULL_HANDLE || m_fragShaderModule == VK_NULL_HANDLE)
+	if(vertShaderModule_ == VK_NULL_HANDLE || fragShaderModule_ == VK_NULL_HANDLE)
 	{
 		auto vertShaderCode = readFile("shaders/vert.spv");
 		auto fragShaderCode = readFile("shaders/frag.spv");
-		m_vertShaderModule = createShaderModule(vertShaderCode);
-		m_fragShaderModule = createShaderModule(fragShaderCode);
+		vertShaderModule_ = createShaderModule(vertShaderCode);
+		fragShaderModule_ = createShaderModule(fragShaderCode);
 	}
 
 	// Setup shader stages
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertShaderStageInfo.module = m_vertShaderModule;
+	vertShaderStageInfo.module = vertShaderModule_;
 	vertShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragShaderStageInfo.module = m_fragShaderModule;
+	fragShaderStageInfo.module = fragShaderModule_;
 	fragShaderStageInfo.pName = "main";
 
 	VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -65,10 +123,10 @@ GraphicsPipeline::GraphicsPipeline()
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 1;
-	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	vertexInputInfo.vertexBindingDescriptionCount = 0; // 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = 0; // static_cast<uint32_t>(attributeDescriptions.size());
+	vertexInputInfo.pVertexBindingDescriptions = nullptr; // &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = nullptr; // attributeDescriptions.data();
 
 	// Setup geometry type
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -80,15 +138,15 @@ GraphicsPipeline::GraphicsPipeline()
 	VkViewport viewport{};
 	viewport.x = 0.0f;
 	viewport.y = 0.0f;
-	viewport.width = static_cast<float>(m_rSwapchain.GetExtent2D().width);
-	viewport.height = static_cast<float>(m_rSwapchain.GetExtent2D().height);
+	viewport.width = static_cast<float>(rSwapchain.GetExtent2D().width);
+	viewport.height = static_cast<float>(rSwapchain.GetExtent2D().height);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
 	// Which pixels should be drawn (anything outside gets discarded)
 	VkRect2D scissor{};
 	scissor.offset = {0, 0};
-	scissor.extent = m_rSwapchain.GetExtent2D();
+	scissor.extent = rSwapchain.GetExtent2D();
 
 	// Compile both into viewport state
 	VkPipelineViewportStateCreateInfo viewportState{};
@@ -106,7 +164,7 @@ GraphicsPipeline::GraphicsPipeline()
 	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizer.lineWidth = 1.0f;
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
 	rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 	rasterizer.depthBiasClamp = 0.0f;          // Optional
@@ -144,8 +202,6 @@ GraphicsPipeline::GraphicsPipeline()
 	colorBlending.blendConstants[2] = 0.0f; // Optional
 	colorBlending.blendConstants[3] = 0.0f; // Optional
 
-	m_renderPass = createRenderPass(m_rSwapchain.GetImageFormat());
-
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount = 2;
@@ -158,18 +214,38 @@ GraphicsPipeline::GraphicsPipeline()
 	pipelineInfo.pDepthStencilState = nullptr; // Optional
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = nullptr; // Optional
-	pipelineInfo.layout = m_pipelineLayout;
-	pipelineInfo.renderPass = m_renderPass;
+	pipelineInfo.layout = pipelineLayout_;
+	pipelineInfo.renderPass = renderPass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 	pipelineInfo.basePipelineIndex = -1;              // Optional
 
-	if(vkCreateGraphicsPipelines(m_rDeviceContext.GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline) != VK_SUCCESS)
+	if(vkCreateGraphicsPipelines(rDeviceContext.GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline_) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 }
 
-GraphicsPipeline::~GraphicsPipeline() {
-	
+GraphicsPipeline::~GraphicsPipeline() = default;
+
+VkShaderModule GraphicsPipeline::createShaderModule(const std::vector<char> &code)
+{
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = code.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+	VkShaderModule shaderModule;
+	if(vkCreateShaderModule(deviceContext_.GetDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create shader module!");
+	}
+	return shaderModule;
+}
+
+void GraphicsPipeline::Bind(VkCommandBuffer &rCommandBuffer)
+{
+	// Bind graphics pipeline
+	vkCmdBindPipeline(rCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+
+	// vkCmdBindDescriptorSets(rCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
 }

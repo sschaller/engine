@@ -1,3 +1,4 @@
+#include <chrono>
 #include "Engine.h"
 
 #include "DeviceContext.h"
@@ -9,7 +10,7 @@ Engine::Engine(DeviceContext &rContext, Window &rWindow)
 }
 
 Engine::~Engine() {
-    m_rContext.WaitIdle();
+    rDeviceContext_.WaitIdle();
     destroyCommandPool();
     destroyFramebuffers();
     destroyRenderPass(renderPass_);
@@ -28,21 +29,22 @@ void Engine::Render() {
         // Frame buffers are always destroyed when swapchain is out of date (change of images)
         destroyFramebuffers();
 
-        if (renderPass_.imageFormat_ != swapchain_.GetImageFormat()) {
+        if (imageFormat_ != swapchain_.GetImageFormat()) {
             // Only destroy render pass if image format no longer matches    
             destroyRenderPass(renderPass_);
         }
 
-        if (renderPass_.renderPass_ == VK_NULL_HANDLE) {
+        if (renderPass_ == VK_NULL_HANDLE) {
             // Recreate render pass
             renderPass_ = createRenderPass(swapchain_.GetImageFormat());
+            imageFormat_ = swapchain_.GetImageFormat();
         }
 
         // Recreate frame buffers
         swapchainFramebuffers_ = createFramebuffers(swapchain_, renderPass_);
 
         // Recreate pipeline
-        spPipeline_ = std::make_unique<GraphicsPipeline>(renderPass_);
+        spPipeline_ = std::make_unique<GraphicsPipeline>(rDeviceContext_, swapchain_, renderPass_, imageFormat_);
 
         // Record all command buffers, bind pipeline etc.
 
@@ -88,18 +90,69 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo)
 {
 	static auto startTime = std::chrono::high_resolution_clock::now();
 
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-	
-	UniformBufferObject ubo{};
-	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), m_rSwapchain.GetExtent2D().width / (float)m_rSwapchain.GetExtent2D().height, 0.1f, 10.0f);
-	ubo.proj[1][1] *= -1;
-	void *data;
-	vkMapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex], 0, sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex]);
+    // Get command buffer for current frame
+    VkCommandBuffer &rCmdBuffer = commandBuffers_[availableInfo.imageIndex];
+
+	// auto currentTime = std::chrono::high_resolution_clock::now();
+	// float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    // UniformBufferObject ubo{};
+	// ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// ubo.proj = glm::perspective(glm::radians(45.0f), m_rSwapchain.GetExtent2D().width / (float)m_rSwapchain.GetExtent2D().height, 0.1f, 10.0f);
+	// ubo.proj[1][1] *= -1;
+	// void *data;
+	// vkMapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex], 0, sizeof(ubo), 0, &data);
+	// memcpy(data, &ubo, sizeof(ubo));
+	// vkUnmapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex]);
+
+
+    // Start recording
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0;                  // Optional
+    beginInfo.pInheritanceInfo = nullptr; // Optional
+
+    if(vkBeginCommandBuffer(rCmdBuffer, &beginInfo) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    // Start renderpass
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass_;
+    renderPassInfo.framebuffer = swapchainFramebuffers_[availableInfo.imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapchain_.GetExtent2D();
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(rCmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    // Bind graphics pipeline
+    spPipeline_->Bind(rCmdBuffer);
+
+    /*
+    VkBuffer vertexBuffers[] = {m_vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    */
+
+    // Draw
+    // vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(c_indices.size()), 1, 0, 0, 0);
+    vkCmdDraw(rCmdBuffer, 3, 1, 0, 0);
+
+    // End renderpass
+    vkCmdEndRenderPass(rCmdBuffer);
+
+    // End recording
+    if(vkEndCommandBuffer(rCmdBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to record command buffer!");
+    }
 }
 
 void Engine::submit(const Swapchain::AvailableImageInfo &availableInfo)
@@ -127,7 +180,7 @@ VkCommandPool Engine::createCommandPool(VkSurfaceKHR surface) {
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = rDeviceContext_.GetQueueFamilyIndices().graphicsFamily.value();
-    poolInfo.flags = 0;  // Optional
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     VkCommandPool commandPool;
     if (vkCreateCommandPool(rDeviceContext_.GetDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
@@ -165,7 +218,7 @@ std::vector<VkCommandBuffer> Engine::createCommandBuffers(uint32_t numImages, Vk
     return commandBuffers;
 }
 
-Engine::RenderPass Engine::createRenderPass(const VkFormat &swapchainImageFormat) {
+VkRenderPass Engine::createRenderPass(const VkFormat &swapchainImageFormat) {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = swapchainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -206,17 +259,17 @@ Engine::RenderPass Engine::createRenderPass(const VkFormat &swapchainImageFormat
     if (vkCreateRenderPass(rDeviceContext_.GetDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
-    return RenderPass{renderPass, swapchainImageFormat};
+    return renderPass;
 }
 
-void Engine::destroyRenderPass(RenderPass &rRenderPass) {
-    if (rRenderPass.renderPass_ != VK_NULL_HANDLE) {
-        vkDestroyRenderPass(rDeviceContext_.GetDevice(), rRenderPass.renderPass_, nullptr);
-        rRenderPass.renderPass_ = VK_NULL_HANDLE;
+void Engine::destroyRenderPass(VkRenderPass &rRenderPass) {
+    if (rRenderPass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(rDeviceContext_.GetDevice(), rRenderPass, nullptr);
+        rRenderPass = VK_NULL_HANDLE;
     }
 }
 
-std::vector<VkFramebuffer> Engine::createFramebuffers(Swapchain &rSwapchain, RenderPass &rRenderPass) {
+std::vector<VkFramebuffer> Engine::createFramebuffers(Swapchain &rSwapchain, VkRenderPass &rRenderPass) {
     std::vector<VkFramebuffer> framebuffers;
     framebuffers.resize(rSwapchain.GetImageViews().size());
 
@@ -225,7 +278,7 @@ std::vector<VkFramebuffer> Engine::createFramebuffers(Swapchain &rSwapchain, Ren
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = rRenderPass.renderPass_;
+        framebufferInfo.renderPass = rRenderPass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = rSwapchain.GetExtent2D().width;
