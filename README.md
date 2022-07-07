@@ -14,10 +14,12 @@
 - Well structured components (vulkan, engine, windowing, gui / inputs)
 
 ## Build & Run
-- Currently only works on Windows. Open CMakeLists.txt in Visual Studio Code / Visual Studio
-- Requires build tools (Visual Studio), Conan, VulkanSDK installed and in Path
-- Or mkdir build && cd build && cmake .. && cmake --build .
-- Run engine.exe
+- Tested on Windows and MacOS.
+- Requires build tools (msvc or clang), Conan, VulkanSDK installed and in Path
+- Either:
+    - Open CMakeLists.txt in Visual Studio
+    - Open CMakeLists.txt in Visual Studio Code with CMake extension
+    - `mkdir build && cd build && cmake .. && cmake --build .` and run engine application
 
 ## Credits
 - Conan

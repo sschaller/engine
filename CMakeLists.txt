@@ -18,4 +18,4 @@ add_executable(engine ${SOURCES})
 
 target_include_directories(engine PUBLIC ${Vulkan_INCLUDE_DIRS})
 
-target_link_libraries(engine CONAN_PKG::sdl ${Vulkan_LIBRARIES})
+target_link_libraries(engine CONAN_PKG::sdl ${Vulkan_LIBRARIES} CONAN_PKG::glm)

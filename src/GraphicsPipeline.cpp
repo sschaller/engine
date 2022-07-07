@@ -226,7 +226,14 @@ GraphicsPipeline::GraphicsPipeline(DeviceContext &rDeviceContext, Swapchain &rSw
 	}
 }
 
-GraphicsPipeline::~GraphicsPipeline() = default;
+GraphicsPipeline::~GraphicsPipeline()
+{
+	vkDestroyPipeline(deviceContext_.GetDevice(), pipeline_, nullptr);
+	vkDestroyShaderModule(deviceContext_.GetDevice(), vertShaderModule_, nullptr);
+	vkDestroyShaderModule(deviceContext_.GetDevice(), fragShaderModule_, nullptr);
+	vkDestroyPipelineLayout(deviceContext_.GetDevice(), pipelineLayout_, nullptr);
+	vkDestroyDescriptorSetLayout(deviceContext_.GetDevice(), descriptorSetLayout_, nullptr);
+}
 
 VkShaderModule GraphicsPipeline::createShaderModule(const std::vector<char> &code)
 {
