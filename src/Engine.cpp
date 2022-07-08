@@ -46,8 +46,8 @@ void Engine::Render() {
         // Recreate pipeline
         spPipeline_ = std::make_unique<GraphicsPipeline>(rDeviceContext_, swapchain_, renderPass_, imageFormat_);
         
-        GraphicsPipeline::ShaderModule vertexModule{VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, ResourceManager::ReadBinaryFile("shaders/vert.spv")};
-        GraphicsPipeline::ShaderModule fragmentModule{VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, ResourceManager::ReadBinaryFile("shaders/frag.spv")};
+        GraphicsPipeline::ShaderModule vertexModule{VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, ResourceManager::ReadBinaryFile("shaders/shader.vert.spv")};
+        GraphicsPipeline::ShaderModule fragmentModule{VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, ResourceManager::ReadBinaryFile("shaders/shader.frag.spv")};
         
         spPipeline_->SetShaderModules({vertexModule, fragmentModule});
 
