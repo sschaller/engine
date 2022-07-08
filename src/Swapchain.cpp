@@ -10,6 +10,7 @@ namespace {
 
 Swapchain::Swapchain(DeviceContext &rDeviceContext, Window &rWindow)
     : rDeviceContext_(rDeviceContext), rWindow_(rWindow) {
+        rWindow.RegisterResizeCallback(std::bind(&Swapchain::OnWindowResize, this));
         surface_ = rWindow_.CreateSurface(rDeviceContext_);
         rDeviceContext_.CreateDevice(surface_);
     }
@@ -25,6 +26,10 @@ Swapchain::~Swapchain() {
     vkDestroySurfaceKHR(rDeviceContext_.GetInstance(), surface_, nullptr);
 }
 
+void Swapchain::OnWindowResize() {
+    outOfDate_ = true;
+}
+
 bool Swapchain::Update() {
     // Check if window resized
 
@@ -32,6 +37,9 @@ bool Swapchain::Update() {
         return false;
     }
     outOfDate_ = false;
+
+    // Wait until no resources are in use anymore
+    rDeviceContext_.WaitIdle();
 
     if (swapchain_ != VK_NULL_HANDLE) {
         // We already created a swapchain, first destroy resources of the existing one

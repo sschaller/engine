@@ -37,6 +37,16 @@ void WindowManager::PollEvents() {
             case SDL_QUIT:
                 quit_ = true;
                 break;
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                    for (std::unique_ptr<Window> &rspWindow : windows_) {
+                        if (event.window.windowID == SDL_GetWindowID(rspWindow->GetSDLWindow())) {
+                            rspWindow->OnResize();
+                            break;
+                        }
+                    }
+                }
+                break;
         }
     }
 

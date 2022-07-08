@@ -1,7 +1,7 @@
 #include <chrono>
-#include "Engine.h"
-
 #include "DeviceContext.h"
+#include "Engine.h"
+#include "ResourceManager.h"
 #include "Window.h"
 
 Engine::Engine(DeviceContext &rContext, Window &rWindow)
@@ -45,6 +45,11 @@ void Engine::Render() {
 
         // Recreate pipeline
         spPipeline_ = std::make_unique<GraphicsPipeline>(rDeviceContext_, swapchain_, renderPass_, imageFormat_);
+        
+        GraphicsPipeline::ShaderModule vertexModule{VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, ResourceManager::ReadBinaryFile("shaders/vert.spv")};
+        GraphicsPipeline::ShaderModule fragmentModule{VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, ResourceManager::ReadBinaryFile("shaders/frag.spv")};
+        
+        spPipeline_->SetShaderModules({vertexModule, fragmentModule});
 
         // Record all command buffers, bind pipeline etc.
 
@@ -105,6 +110,8 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo)
 	// memcpy(data, &ubo, sizeof(ubo));
 	// vkUnmapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex]);
 
+    // Update pipelines
+    spPipeline_->Update();
 
     // Start recording
     VkCommandBufferBeginInfo beginInfo{};

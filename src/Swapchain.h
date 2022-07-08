@@ -28,6 +28,8 @@ public:
     Swapchain(DeviceContext &rDeviceContext, Window &rWindow);
     ~Swapchain();
 
+    void OnWindowResize();
+
     bool Update();
 
     void DestroyResources();

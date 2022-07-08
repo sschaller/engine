@@ -22,3 +22,11 @@ VkSurfaceKHR Window::CreateSurface(DeviceContext &rDeviceContext) {
     }
     return surface;
 }
+
+void Window::OnResize() {
+    if (resizeCallback_ != nullptr) {
+        resizeCallback_();
+    }
+}
+
+void Window::RegisterResizeCallback(Window::ResizeCallback &&rrFunc) { resizeCallback_ = std::move(rrFunc); }

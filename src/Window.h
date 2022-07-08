@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -14,12 +15,17 @@ public:
         uint32_t height;
     };
 
+    using ResizeCallback = std::function<void()>;
+
 public:
     Window(SDL_Window *pWindow);
     SDL_Window *GetSDLWindow() { return pWindow_; }
     Size GetSize() const;
     VkSurfaceKHR CreateSurface(DeviceContext &rDeviceContext);
+    void OnResize();
+    void RegisterResizeCallback(ResizeCallback &&rrFunc);
 
 private:
     SDL_Window *pWindow_;
+    ResizeCallback resizeCallback_ = nullptr;
 };
