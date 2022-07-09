@@ -2,10 +2,11 @@
 #include "DeviceContext.h"
 #include "Engine.h"
 #include "ResourceManager.h"
+#include "Scene.h"
 #include "Window.h"
 
-Engine::Engine(DeviceContext &rContext, Window &rWindow)
-    : rDeviceContext_(rContext), rWindow_(rWindow), swapchain_(rContext, rWindow) {
+Engine::Engine(Scene &rScene, DeviceContext &rContext, Window &rWindow)
+    : rScene_(rScene), rDeviceContext_(rContext), rWindow_(rWindow), swapchain_(rContext, rWindow) {
     commandPool_ = createCommandPool(swapchain_.GetSurface());
 }
 
@@ -43,14 +44,6 @@ void Engine::Render() {
         // Recreate frame buffers
         swapchainFramebuffers_ = createFramebuffers(swapchain_, renderPass_);
 
-        // Recreate pipeline
-        spPipeline_ = std::make_unique<GraphicsPipeline>(rDeviceContext_, swapchain_, renderPass_, imageFormat_);
-        
-        GraphicsPipeline::ShaderModule vertexModule{VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, ResourceManager::ReadBinaryFile("shaders/shader.vert.spv")};
-        GraphicsPipeline::ShaderModule fragmentModule{VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT, ResourceManager::ReadBinaryFile("shaders/shader.frag.spv")};
-        
-        spPipeline_->SetShaderModules({vertexModule, fragmentModule});
-
         // Record all command buffers, bind pipeline etc.
 
         // Framebuffers represent a collection of memory attachments
@@ -82,7 +75,7 @@ void Engine::Render() {
 
     // At this point we know which commandBuffer we can use to record
 
-    update(availableInfo);
+    update(availableInfo, outOfDate);
     submit(availableInfo);
     if(!swapchain_.Present(availableInfo))
     {
@@ -91,7 +84,7 @@ void Engine::Render() {
     }
 }
 
-void Engine::update(const Swapchain::AvailableImageInfo &availableInfo)
+void Engine::update(const Swapchain::AvailableImageInfo &availableInfo, bool outOfDate)
 {
 	static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -111,7 +104,7 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo)
 	// vkUnmapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex]);
 
     // Update pipelines
-    spPipeline_->Update();
+    rScene_.Update(rDeviceContext_, swapchain_, renderPass_, imageFormat_, rCmdBuffer, outOfDate);
 
     // Start recording
     VkCommandBufferBeginInfo beginInfo{};
@@ -138,19 +131,7 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo)
 
     vkCmdBeginRenderPass(rCmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    // Bind graphics pipeline
-    spPipeline_->Bind(rCmdBuffer);
-
-    /*
-    VkBuffer vertexBuffers[] = {m_vertexBuffer};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-    */
-
-    // Draw
-    // vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(c_indices.size()), 1, 0, 0, 0);
-    vkCmdDraw(rCmdBuffer, 3, 1, 0, 0);
+    rScene_.Draw(rCmdBuffer);
 
     // End renderpass
     vkCmdEndRenderPass(rCmdBuffer);

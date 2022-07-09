@@ -7,17 +7,18 @@
 #include "Swapchain.h"
 
 class DeviceContext;
+class Scene;
 class Window;
 
 class Engine {
 public:
-    Engine(DeviceContext &rContext, Window &rWindow);
+    Engine(Scene &rScene, DeviceContext &rContext, Window &rWindow);
     ~Engine();
 
     void Render();
 
 private:
-    void update(const Swapchain::AvailableImageInfo &availableInfo);
+    void update(const Swapchain::AvailableImageInfo &availableInfo, bool outOfDate);
     void submit(const Swapchain::AvailableImageInfo &availableInfo);
 
     VkCommandPool createCommandPool(VkSurfaceKHR surface);
@@ -29,6 +30,7 @@ private:
     void destroyFramebuffers();
 
 private:
+    Scene &rScene_;
     DeviceContext &rDeviceContext_;
     Window &rWindow_;
     Swapchain swapchain_;
@@ -37,5 +39,4 @@ private:
     VkCommandPool commandPool_ = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> commandBuffers_;
     std::vector<VkFramebuffer> swapchainFramebuffers_;
-    std::unique_ptr<GraphicsPipeline> spPipeline_;
 };

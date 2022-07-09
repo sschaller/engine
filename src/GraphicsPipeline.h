@@ -1,12 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <cstddef>
 #include <vector>
-
-class DeviceContext;
-class Swapchain;
+#include "DeviceContext.h"
+#include "Swapchain.h"
 
 class GraphicsPipeline {
 public:

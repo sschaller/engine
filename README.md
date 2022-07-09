@@ -4,8 +4,9 @@
 - Create Window with SDL
 - Setup vulkan instance, device
 - Setup swapchain
-- Working on engine / creation of render passes next
-
+- Flexible pipeline structure (currently one subpass)
+- Currently draws a triangle
+- Currently working on scene object representation
 
 ## Goals
 - Deferred shading

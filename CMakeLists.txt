@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(engine)
 
-file(GLOB SOURCES "src/*.h" "src/*.cpp")
+file(GLOB_RECURSE SOURCES "src/*.h" "src/*.cpp")
 
 include(conan.cmake)
 conan_cmake_run(CONANFILE conanfile.py

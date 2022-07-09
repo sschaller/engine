@@ -2,8 +2,11 @@
 
 #include "DeviceContext.h"
 #include "Engine.h"
+#include "Scene.h"
 #include "WindowManager.h"
 
+#include "objects/MeshObject.h"
+#include "materials/PhongMaterial.h"
 
 int main(int argc, char *argv[]) {
     WindowManager manager;
@@ -11,7 +14,14 @@ int main(int argc, char *argv[]) {
     Window *pWindow = manager.CreateWindow("Test", 800u, 600u);
 
     DeviceContext context(manager.GetRequiredExtensions(pWindow));
-    Engine engine(context, *pWindow);
+    
+    Scene scene;
+    Engine engine(scene, context, *pWindow);
+
+    auto spPhongMaterial = std::make_shared<PhongMaterial>();
+    auto spMeshObject = std::make_unique<MeshObject>();
+    spMeshObject->SetMaterial(spPhongMaterial);
+    scene.AddObject(std::move(spMeshObject));
 
     while (true) {
         manager.PollEvents();
