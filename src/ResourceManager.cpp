@@ -2,6 +2,7 @@
 #include <array>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
+#include <tiny_obj_loader.h>
 
 struct Vertex {
     glm::vec2 pos;

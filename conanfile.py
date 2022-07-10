@@ -2,7 +2,7 @@ from conans import ConanFile, CMake
 
 class EngineConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "sdl/2.0.20", "glm/0.9.9.8"  # comma-separated list of requirements
+    requires = "sdl/2.0.20", "glm/0.9.9.8", "tinyobjloader/1.0.6"
     generators = "cmake", "visual_studio", "txt"
     default_options = {}
 

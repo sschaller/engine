@@ -18,7 +18,7 @@ add_executable(engine ${SOURCES})
 
 target_include_directories(engine PUBLIC ${Vulkan_INCLUDE_DIRS})
 
-target_link_libraries(engine CONAN_PKG::sdl ${Vulkan_LIBRARIES} CONAN_PKG::glm)
+target_link_libraries(engine CONAN_PKG::sdl ${Vulkan_LIBRARIES} CONAN_PKG::glm CONAN_PKG::tinyobjloader)
 
 set(SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
 set(SHADER_TARGET_DIR shaders/)
