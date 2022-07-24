@@ -1,15 +1,15 @@
 #include "PhongMaterial.h"
 
 #include "../GraphicsPipeline.h"
+#include "../RenderContext.h"
 #include "../ResourceManager.h"
 
 PhongMaterial::~PhongMaterial() = default;
 
-void PhongMaterial::Update(DeviceContext &rDeviceContext, Swapchain &rSwapchain, VkRenderPass &rRenderPass,
-                           VkFormat &rImageFormat, VkCommandBuffer &rCommandBuffer, bool outOfDate) {
-    if (spPipeline_ == nullptr || outOfDate) {
+void PhongMaterial::Update(const RenderContext &rContext) {
+    if (spPipeline_ == nullptr || rContext.outOfDate) {
         // Recreate pipeline
-        spPipeline_ = std::make_unique<GraphicsPipeline>(rDeviceContext, rSwapchain, rRenderPass, rImageFormat);
+        spPipeline_ = std::make_unique<GraphicsPipeline>(rContext.deviceContext, rContext.swapchain, rContext.renderPass, rContext.imageFormat);
 
         GraphicsPipeline::ShaderModule vertexModule{VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
                                                     ResourceManager::ReadBinaryFile("shaders/shader.vert.spv")};

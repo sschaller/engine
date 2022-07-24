@@ -11,8 +11,8 @@ public:
     void AddObject(std::unique_ptr<Object> &&rrObject);
     void RemoveObject(const Object &rObject);
     
-    void Update(DeviceContext &rDeviceContext, Swapchain &rSwapchain, VkRenderPass &rRenderPass, VkFormat &rImageFormat, VkCommandBuffer &rCommandBuffer, bool outOfDate);
-    void Draw(VkCommandBuffer &rCommandBuffer);
+    void Update(const RenderContext &rContext);
+    void Draw(const RenderContext &rContext);
 private:
     std::vector<std::unique_ptr<Object>> objects_;
 };

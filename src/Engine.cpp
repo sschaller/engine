@@ -1,6 +1,7 @@
 #include <chrono>
 #include "DeviceContext.h"
 #include "Engine.h"
+#include "RenderContext.h"
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "Window.h"
@@ -103,8 +104,18 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo, bool out
 	// memcpy(data, &ubo, sizeof(ubo));
 	// vkUnmapMemory(m_rDeviceContext.GetDevice(), m_uniformBuffersMemory[availableInfo.imageIndex]);
 
+    RenderContext context{
+        .deviceContext = rDeviceContext_,
+        .swapchain = swapchain_,
+        .renderPass = renderPass_,
+        .imageFormat = imageFormat_,
+        .commandBuffer = rCmdBuffer,
+        .imageIndex = availableInfo.imageIndex,
+        .outOfDate = outOfDate
+    };
+
     // Update pipelines
-    rScene_.Update(rDeviceContext_, swapchain_, renderPass_, imageFormat_, rCmdBuffer, outOfDate);
+    rScene_.Update(context);
 
     // Start recording
     VkCommandBufferBeginInfo beginInfo{};
@@ -131,7 +142,7 @@ void Engine::update(const Swapchain::AvailableImageInfo &availableInfo, bool out
 
     vkCmdBeginRenderPass(rCmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    rScene_.Draw(rCmdBuffer);
+    rScene_.Draw(context);
 
     // End renderpass
     vkCmdEndRenderPass(rCmdBuffer);

@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <optional>
+#include "ResourceManager.h"
 
 class Window;
 
@@ -36,6 +37,7 @@ public:
 	static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 private:
+    ResourceManager resourceManager_;
     VkInstance instance_ = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;

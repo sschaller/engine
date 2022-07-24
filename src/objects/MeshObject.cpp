@@ -1,4 +1,8 @@
 #include "MeshObject.h"
+#include "../RenderContext.h"
+#include "../ResourceManager.h"
+
+MeshObject::~MeshObject() = default;
 
 void MeshObject::SetMaterial(const std::shared_ptr<Material> &rMaterial)
 {
@@ -10,17 +14,26 @@ std::shared_ptr<Material> MeshObject::GetMaterial() const
     return material_;
 }
 
-void MeshObject::Update(DeviceContext &rDeviceContext, Swapchain &rSwapchain, VkRenderPass &rRenderPass,
-                        VkFormat &rImageFormat, VkCommandBuffer &rCommandBuffer, bool outOfDate) {
+void MeshObject::SetVertexData(const std::shared_ptr<VertexData> &rVertexData)
+{
+    vertexData_ = rVertexData;
+}
+
+void MeshObject::Update(const RenderContext &rContext) {
     if(material_ == nullptr)
     {
         return;
     }
 
-    material_->Update(rDeviceContext, rSwapchain, rRenderPass, rImageFormat, rCommandBuffer, outOfDate);
+    material_->Update(rContext);
+
+    if(vertexData_ != nullptr){
+        // Create vertex buffer
+    }
+
 }
 
-void MeshObject::Draw(VkCommandBuffer &rCommandBuffer) {
+void MeshObject::Draw(const RenderContext &rContext) {
     if(material_ == nullptr)
     {
         return;
@@ -34,8 +47,8 @@ void MeshObject::Draw(VkCommandBuffer &rCommandBuffer) {
     */
 
     // Bind graphics pipeline
-    material_->Bind(rCommandBuffer);
+    material_->Bind(rContext.commandBuffer);
     // Draw
     // vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(c_indices.size()), 1, 0, 0, 0);
-    vkCmdDraw(rCommandBuffer, 3, 1, 0, 0);
+    vkCmdDraw(rContext.commandBuffer, 3, 1, 0, 0);
 }

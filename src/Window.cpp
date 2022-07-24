@@ -8,10 +8,6 @@ Window::Size Window::GetSize() const {
     int width, height;
     SDL_Vulkan_GetDrawableSize(pWindow_, &width, &height);
 
-    if (&width == nullptr || &height == nullptr) {
-        throw std::runtime_error("Failed to retrieve window dimensions!");
-    }
-
     return Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 }
 

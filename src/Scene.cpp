@@ -11,15 +11,14 @@ void Scene::RemoveObject(const Object &rObject) {
     }
 }
 
-void Scene::Update(DeviceContext &rDeviceContext, Swapchain &rSwapchain, VkRenderPass &rRenderPass,
-                   VkFormat &rImageFormat, VkCommandBuffer &rCommandBuffer, bool outOfDate) {
+void Scene::Update(const RenderContext &rContext) {
     for (auto &rspObject : objects_) {
-        rspObject->Update(rDeviceContext, rSwapchain, rRenderPass, rImageFormat, rCommandBuffer, outOfDate);
+        rspObject->Update(rContext);
     }
 }
 
-void Scene::Draw(VkCommandBuffer &rCommandBuffer) {
+void Scene::Draw(const RenderContext &rContext) {
     for (auto &rspObject : objects_) {
-        rspObject->Draw(rCommandBuffer);
+        rspObject->Draw(rContext);
     }
 }

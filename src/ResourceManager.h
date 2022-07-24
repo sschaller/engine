@@ -1,25 +1,23 @@
 #pragma once
 
+
 #include <filesystem>
-#include <fstream>
 #include <vector>
+#include "VertexData.h"
+#include "ImageData.h"
 
 class ResourceManager {
 public:
-    static std::vector<char> ReadBinaryFile(const std::filesystem::path &rFilePath)
-    {
-        std::ifstream file(rFilePath, std::ios::ate | std::ios::binary);
+    static std::vector<char> ReadBinaryFile(const std::filesystem::path &rFilePath);
+    static std::shared_ptr<VertexData> LoadVertexDataFromObjFile(const std::filesystem::path &rFilePath);
+    static std::shared_ptr<ImageData> LoadImageDataFromFile(const std::filesystem::path &rFilePath);
 
-        if (!file.is_open()) {
-            throw std::runtime_error("failed to open file: " + rFilePath.string() + "!");
-        }
+    struct STextureHandle {
+        uint32_t test;
+    };
 
-        std::size_t fileSize = static_cast<std::size_t>(file.tellg());
-        std::vector<char> buffer(fileSize);
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-        file.close();
+    std::shared_ptr<STextureHandle> GetTexture(const std::string &rTextureId);
+    std::shared_ptr<STextureHandle> CreateTexture(const std::string &rTextureId);
 
-        return buffer;
-    }
+    void CreateVertexDataBuffer(const VertexData &rVertexData);
 };
